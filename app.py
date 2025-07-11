@@ -64,7 +64,7 @@ if uploaded_file:
                     y=df[col],
                     mode='lines+markers',
                     name=col,
-                    line=dict(width=1)  # 👈 Thin lines
+                    line=dict(width=0.5)  # 👈 Extra-thin lines
                 ))
 
             fig.update_layout(
@@ -73,7 +73,7 @@ if uploaded_file:
                 yaxis=dict(
                     title="Values",
                     tick0=0,
-                    dtick=10,  # 👈 Y-axis ticks every 10 units
+                    dtick=10,  # Y-axis ticks every 10 units
                     automargin=True
                 ),
                 hovermode='x unified',
@@ -116,3 +116,4 @@ if uploaded_file:
 
     except Exception as e:
         st.error(f"❌ Error processing the file: {e}")
+
