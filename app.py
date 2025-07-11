@@ -64,7 +64,7 @@ if uploaded_file:
                     y=df[col],
                     mode='lines+markers',
                     name=col,
-                    line=dict(width=10)  # 👈 Extra-thin lines
+                    line=dict(width=0)  # 👈 Extra-thin lines
                 ))
 
             fig.update_layout(
