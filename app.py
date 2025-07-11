@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
@@ -65,13 +64,18 @@ if uploaded_file:
                     y=df[col],
                     mode='lines+markers',
                     name=col,
-                    line=dict(width=1)  # 👈 Thinner line
+                    line=dict(width=1)  # 👈 Thin lines
                 ))
 
             fig.update_layout(
                 title="📊 Sensor Data Over Time",
                 xaxis_title="Time",
-                yaxis_title="Values",
+                yaxis=dict(
+                    title="Values",
+                    tick0=0,
+                    dtick=10,  # 👈 Y-axis ticks every 10 units
+                    automargin=True
+                ),
                 hovermode='x unified',
                 dragmode='zoom',
                 template=plotly_template,
