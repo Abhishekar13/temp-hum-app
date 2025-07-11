@@ -1,119 +1,84 @@
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
-import re
 import io
 
+# Page config
 st.set_page_config(page_title="Comet Envions Pvt Ltd", layout="wide")
-st.markdown("<h2 style='color:green;'>🌍 Comet Envions Pvt Ltd</h2>", unsafe_allow_html=True)
-st.title("📊 Universal Sensor Data Plotter")
 
-# File upload
-uploaded_file = st.file_uploader("📁 Upload Data File (CSV, Excel, TXT...)", type=None)
+# Title and brand
+st.markdown("<h2 style='color:green;'>🌍 Comet Envions Pvt Ltd</h2>", unsafe_allow_html=True)
+st.title("📊 Dynamic Data Plotter")
+
+# Upload file (any type)
+uploaded_file = st.file_uploader("Upload your data file", type=["csv", "xlsx", "txt"])
 
 if uploaded_file:
+    # Determine file type
+    file_type = uploaded_file.name.split('.')[-1].lower()
+
+    # Read file dynamically
     try:
-        # Detect file type and read accordingly
-        file_name = uploaded_file.name
-        if file_name.endswith(".csv"):
-            df = pd.read_csv(uploaded_file, engine="python")
-        elif file_name.endswith((".xlsx", ".xls")):
+        if file_type == 'csv':
+            df = pd.read_csv(uploaded_file)
+        elif file_type == 'xlsx':
             df = pd.read_excel(uploaded_file)
-        elif file_name.endswith(".txt"):
-            df = pd.read_csv(uploaded_file, delimiter="\t", engine="python")
+        elif file_type == 'txt':
+            df = pd.read_csv(uploaded_file, delimiter='\t')
         else:
-            st.error("❌ Unsupported file type.")
+            st.error("Unsupported file format.")
             st.stop()
 
-        # Clean & de-duplicate column names
-        cleaned_cols = []
-        col_counts = {}
-        for col in df.columns:
-            cleaned = re.sub(r'[^\w\s]', '', str(col)).strip().replace(" ", "_")
-            if cleaned in col_counts:
-                col_counts[cleaned] += 1
-                cleaned = f"{cleaned}_{col_counts[cleaned]}"
-            else:
-                col_counts[cleaned] = 1
-            cleaned_cols.append(cleaned)
-        df.columns = cleaned_cols
+        df.columns = df.columns.str.strip()
+        st.success("✅ File loaded successfully!")
 
-        # Handle timestamp or fallback to index
-        date_col = next((c for c in df.columns if "date" in c.lower()), None)
-        time_col = next((c for c in df.columns if "time" in c.lower()), None)
-
-        if date_col and time_col:
-            df['Timestamp'] = pd.to_datetime(df[date_col].astype(str) + " " + df[time_col].astype(str), errors='coerce')
-            x_axis = 'Timestamp'
+        # Timestamp support (optional)
+        if 'Time' in df.columns or 'Timestamp' in df.columns:
+            time_col = st.selectbox("Select Time Column (Optional)", options=df.columns, index=0)
         else:
-            timestamp_col = next((c for c in df.columns if "timestamp" in c.lower()), None)
-            if timestamp_col:
-                df['Timestamp'] = pd.to_datetime(df[timestamp_col], errors='coerce')
-                x_axis = 'Timestamp'
-            else:
-                df['Index'] = df.index
-                x_axis = 'Index'
+            time_col = None
 
-        # Convert to numeric and keep only columns with valid numbers
-        numeric_columns = []
-        for col in df.columns:
-            if col == x_axis:
-                continue
-            df[col] = pd.to_numeric(df[col], errors='coerce')
-            if df[col].notna().sum() > 0:
-                numeric_columns.append(col)
+        # Column selector
+        selected_columns = st.multiselect("Select columns to plot", options=df.columns, default=df.columns[1:3])
 
-        # DEBUGGING: Show columns identified
-        st.write("✅ Detected Numeric Columns:", numeric_columns)
+        if selected_columns:
+            # Show data table
+            st.subheader("📋 Data Preview")
+            st.dataframe(df[[*selected_columns]])
 
-        # Column selection
-        selected_cols_plot = st.multiselect("📊 Select Columns to Plot", numeric_columns)
-        selected_cols_table = st.multiselect("🖨️ Select Columns to Show in Table", numeric_columns, default=selected_cols_plot)
-
-        # Plotting
-        if selected_cols_plot:
+            # Prepare Plot
             fig = go.Figure()
-            for col in selected_cols_plot:
-                non_null_df = df[[x_axis, col]].dropna()
+            x_vals = df[time_col] if time_col else df.index
+
+            for col in selected_columns:
                 fig.add_trace(go.Scatter(
-                    x=non_null_df[x_axis],
-                    y=non_null_df[col],
+                    x=x_vals,
+                    y=df[col],
                     mode='lines+markers',
-                    name=col.replace("_", " "),
+                    name=col,
                     line=dict(width=2)
                 ))
 
             fig.update_layout(
-                title="📈 Sensor Data Over Time",
-                xaxis_title="Time",
-                yaxis_title="Sensor Values",
-                hovermode='x',
+                title='📈 Selected Data Plot',
+                xaxis_title='Time' if time_col else 'Index',
+                yaxis_title='Values',
                 template="plotly_white",
-                dragmode=False  # disable box zoom
+                showlegend=True
             )
 
             st.plotly_chart(fig, use_container_width=True)
 
-            # Download as PNG
-            try:
-                buf = io.BytesIO()
-                fig.write_image(buf, format="png")
-                st.download_button(
-                    label="📥 Download Clean Plot as PNG",
-                    data=buf.getvalue(),
-                    file_name="sensor_plot.png",
-                    mime="image/png"
-                )
-            except Exception as e:
-                st.warning(f"⚠️ PNG export failed: {e}")
-
-        else:
-            st.warning("👈 Please select at least one column to plot.")
-
-        # Data table
-        if selected_cols_table:
-            st.subheader("🖨️ Selected Data Table")
-            st.dataframe(df[[x_axis] + selected_cols_table].dropna(how='all'))
+            # Downloadable PNG without clutter
+            st.subheader("🖨️ Download Clean Graph")
+            png_bytes = fig.to_image(format="png", width=1200, height=500, scale=2)
+            st.download_button(
+                label="📷 Download Graph as PNG",
+                data=png_bytes,
+                file_name="clean_graph.png",
+                mime="image/png"
+            )
 
     except Exception as e:
-        st.error(f"❌ Error while processing file: {e}")
+        st.error(f"Error loading or processing file: {e}")
+
