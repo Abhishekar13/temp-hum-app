@@ -1,3 +1,4 @@
+
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
@@ -53,7 +54,7 @@ if uploaded_file:
             st.stop()
 
         selected_columns = st.multiselect("✅ Select columns to plot (Y-axis)", numeric_cols,
-                                          default=numeric_cols[:2])  # Select first two by default
+                                          default=numeric_cols[:2])  # Default first 2
 
         # --- Plot Graph ---
         if selected_columns:
@@ -64,7 +65,7 @@ if uploaded_file:
                     y=df[col],
                     mode='lines+markers',
                     name=col,
-                    line=dict(width=2)
+                    line=dict(width=1)  # 👈 Thinner line
                 ))
 
             fig.update_layout(
